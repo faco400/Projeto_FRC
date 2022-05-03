@@ -1,9 +1,9 @@
 # Relatório
 
 **Código da Disciplina**: FGA0211<br>
-**Disciplina**: Fundamentos de Rede de Computadores
-**Curso**: Engenharia de Software - FGA/UnB - 2021.2
-**Professor**: Fernando William Cruz
+**Disciplina**: Fundamentos de Rede de Computadores<br>
+**Curso**: Engenharia de Software - FGA/UnB - 2021.2<br>
+**Professor**: Fernando William Cruz<br>
 
 ## Alunos
 |Matrícula | Aluno |
@@ -25,6 +25,7 @@ Descreva o seu projeto em linhas gerais.
 ( ) NÃO
 Se SIM, insira um manual (ou um script) para auxiliar ainda mais os interessados em consultar o projeto.
 
-## Referências
+## Referências(FONTES)
 
 - https://www.geeksforgeeks.org/simple-chat-room-using-python/
+- Simple TCP Chat Room in Python (https://www.youtube.com/watch?v=3UOyky9sEQY&t=1235s)
