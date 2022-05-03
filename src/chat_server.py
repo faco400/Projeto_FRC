@@ -38,12 +38,31 @@ sempre buscando receber uma mensagem e fazendo o broadcast
 para os demais clientes"""
 def handle(conn):
 	while True:
-			try:
-				message = conn.recv(2048)
-				broadcast(message)
-			except:
-				remove(conn)
-				break
+			# try:
+				msg = message = conn.recv(2048)
+				if msg.decode('ascii').startswith('KICK'):
+					if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
+						name_to_kick = msg.decode('ascii')[5:]
+						kick_user(name_to_kick)
+					else:
+						conn.send('Comando foi recusado!'.encode('ascii'))
+				
+				elif msg.decode('ascii').startswith('BAN'):
+					if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
+						name_to_ban = msg.decode('ascii')[4:]
+						kick_user(name_to_ban)
+						with open('bans.txt', 'a') as f:
+							f.write(f'{name_to_ban}\n')
+						print(f'{name_to_ban} foi banido!')
+					else:
+						conn.send('Comando foi recusado!'.encode('ascii'))
+
+				else:
+					broadcast(message)
+			# except:
+				# print('aiaiai')
+				# remove(conn)
+				# break
 
 """Using the below function, we broadcast the message to all
 clients who's object is not the same as the one sending
@@ -59,7 +78,7 @@ def remove(connection):
 	index = list_of_clients.index(connection)
 	list_of_clients.remove(connection)
 	connection.close()
-	nickname = list_of_nicknames(index)
+	nickname = list_of_nicknames[index]
 	broadcast(f'{nickname} saiu do chat'.encode('ascii'))
 	list_of_nicknames.remove(nickname)
 
@@ -78,8 +97,25 @@ def receive():
 
 		#Envia uma palavra chave para o cliente escolher apelido
 		conn.send('NICK'.encode('ascii'))
-		
 		nickname = conn.recv(2048).decode('ascii')
+
+		with open('bans.txt','r') as f:
+			bans = f.readlines()
+		
+		if nickname+'\n' in bans:
+			conn.send('BAN'.encode('ascii'))
+			conn.close()
+			continue
+
+		if nickname == 'admin':
+			conn.send('PASS'.encode('ascii'))
+			password = conn.recv(2048).decode('ascii')
+
+			if password != 'admin':
+				conn.send('RECUSADO'.encode('ascii'))
+				conn.close()
+				continue
+
 		"""Maintains a list of clients and nicknames for ease of broadcasting
 		a message to all available people in the chatroom"""
 		list_of_clients.append(conn)
@@ -93,6 +129,16 @@ def receive():
 
 		thread = threading.Thread(target=handle, args=(conn,)) # cria uma thread que ira tratar o cliente
 		thread.start() #inicia a thread
+
+def kick_user(name):
+	if name in list_of_nicknames:
+		name_index = list_of_nicknames.index(name)
+		client_to_kick = list_of_clients[name_index]
+		list_of_clients.remove(client_to_kick)
+		client_to_kick.send('Voce foi expulso da sala de bate papo'.encode('ascii'))
+		client_to_kick.close()
+		list_of_nicknames.remove(name)
+		broadcast(f'{name} foi expulso pelo admin'.encode('ascii'))
 
 print('Escutando servidor')
 receive()
