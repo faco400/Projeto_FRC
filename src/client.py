@@ -2,7 +2,7 @@
 from ast import While
 import socket
 import select
-import sys
+import sys, os
 import threading
 from utils import choice_room
 
@@ -52,9 +52,13 @@ def receive():
                     print("Conexao recusada por causa de ban")
                     server.close()
                     stop_thread = True
+                    os._exit(1)
             if message == 'QUIT':
                 print('Saindo...')
                 stop_thread = True
+            if message == 'KICK':
+                print('Voce foi expulso pelo admin')
+                os._exit(1)
             else:
                 if not message == 'NICK':
                     print(message)
@@ -91,12 +95,12 @@ def write():
                         f'BAN {message[len(nickname)+3+5:]}'.encode('ascii'))
             elif command in admin_commands:
                 print("Comandos reservados apenas para admin")
-            elif command == '\\quit':
+            if command == '\\quit':
                 server.send(f'QUIT {nickname}'.encode('ascii'))
                 stop_thread = True
-            elif command == '\\l':
+            if command == '\\l':
                 server.send(f'LS {room}'.encode('ascii'))
-            elif command == '\\help':
+            if command == '\\help':
                 print("\\quit - Sair do chat")
                 print("\\l    - Listar os participantes da sala")
                 print()

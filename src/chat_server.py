@@ -50,7 +50,7 @@ list_of_rooms = [
      "connections": [],
      "members": [],
      "capacity": 20},
-	 {"name": "LAMA",
+    {"name": "LAMA",
      "connections": [],
      "members": [],
      "capacity": 0},
@@ -62,33 +62,35 @@ para os demais clientes"""
 
 
 def handle(conn, room):
-    while True:
-        msg = conn.recv(2048).decode('ascii')
-        if msg.startswith('KICK'):
-            if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
-                name_to_kick = msg[5:]
-                kick_user(name_to_kick)
-            else:
-                conn.send('Comando foi recusado!'.encode('ascii'))
-        elif msg.startswith('BAN'):
-            if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
-                name_to_ban = msg[4:]
-                kick_user(name_to_ban)
-                with open('bans.txt', 'a') as f:
-                    f.write(f'{name_to_ban}\n')
-                print(f'{name_to_ban} foi banido!')
-            else:
-                conn.send('Comando foi recusado!'.encode('ascii'))
-        elif msg.startswith('LS '):
-            r = int(msg.split(' ')[1])
-            memb = "\n".join(list_of_rooms[r]['members'])
-            conn.send(memb.encode('ascii'))
-        elif msg.startswith('QUIT'):
-            conn.send('QUIT'.encode('ascii'))
-            remove(conn)
-            return
-        else:
-            broadcast_room(msg, room)
+	try:
+		while True:
+			msg = conn.recv(2048).decode('ascii')
+			if msg.startswith('KICK'):
+				if room['members'][room['connections'].index(conn)] == 'admin':
+					name_to_kick = msg[5:]
+					kick_user(name_to_kick, "foi expulso pelo admin")
+				else:
+					conn.send('Comando foi recusado!'.encode('ascii'))
+			elif msg.startswith('BAN'):
+				if room['members'][room['connections'].index(conn)] == 'admin':
+					name_to_ban = msg[4:]
+					kick_user(name_to_ban, "foi banido pelo admin")
+					with open('bans.txt', 'a') as f:
+						f.write(f'{name_to_ban}\n')
+				else:
+					conn.send('Comando foi recusado!'.encode('ascii'))
+			elif msg.startswith('LS '):
+				r = int(msg.split(' ')[1])
+				memb = "\n".join(list_of_rooms[r]['members'])
+				conn.send(memb.encode('ascii'))
+			elif msg.startswith('QUIT'):
+				conn.send('QUIT'.encode('ascii'))
+				remove(conn)
+				return
+			else:
+				broadcast_room(msg, room)
+	except:
+		return
 
 
 """Using the below function, we broadcast the message to all
@@ -111,20 +113,17 @@ from the list that was created at the beginning of
 the program"""
 
 
-def remove(connection):
-    index = list_of_clients.index(connection)
-    list_of_clients.remove(connection)
-    print(connection.getpeername(), "disconnected")
-    connection.close()
-    nickname = list_of_nicknames[index]
-    list_of_nicknames.remove(nickname)
+def remove(connection, message="saiu da sala"):
     for room in list_of_rooms:
         if connection in room['connections']:
             i = room['connections'].index(connection)
-            room['members'].remove(room['members'][i])
+            nickname = room['members'][i]
+            room['members'].remove(nickname)
             room['connections'].remove(connection)
             room['capacity'] += 1
-            broadcast_room(f'{nickname} saiu da sala', room)
+            print(connection.getpeername(), "disconnected")
+            connection.close()
+            broadcast_room(f'{nickname} {message}', room)
             return
 
 
@@ -188,16 +187,14 @@ def receive():
         thread.start()  # inicia a thread
 
 
-def kick_user(name):
-    if name in list_of_nicknames:
-        name_index = list_of_nicknames.index(name)
-        client_to_kick = list_of_clients[name_index]
-        list_of_clients.remove(client_to_kick)
-        client_to_kick.send(
-            'Voce foi expulso da sala de bate papo'.encode('ascii'))
-        client_to_kick.close()
-        list_of_nicknames.remove(name)
-        broadcast(f'{name} foi expulso pelo admin')
+def kick_user(name, message):
+    for room in list_of_rooms:
+        if name in room['members']:
+            i = room['members'].index(name)
+            client_to_kick = room['connections'][i]
+            client_to_kick.send('KICK'.encode('ascii'))
+            remove(client_to_kick, message=message)
+            return
 
 
 print('Escutando servidor')
