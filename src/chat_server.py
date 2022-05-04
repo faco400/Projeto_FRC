@@ -57,7 +57,7 @@ def manager():
         elif cmd[0] == "create-room":
             if len(cmd) != 3:
                 print(
-                    "Sintaxe errada para o comando, o correto seria create-room <nome> <capacidade>")
+                    "Sintaxe errada para o comando, o correto seria create-room <room-name> <capacity>")
                 continue
             if not cmd[2].isdigit():
                 print("Capacidede deve ser um digito")
@@ -76,7 +76,7 @@ def manager():
             print("Sala", cmd[1], "criada com sucesso!")
         elif cmd[0] == "remove-room":
             if len(cmd) != 2:
-                print("Sintaxe errada para o comando, o correto seria remove-room <nome>")
+                print("Sintaxe errada para o comando, o correto seria remove-room <room-name>")
                 continue
             room_index = -1
             for i, r in enumerate(list_of_rooms):
@@ -97,6 +97,14 @@ def manager():
             broadcast(" ".join(cmd[1:]))
         elif cmd[0] == "shutdown":
             os._exit(0)
+        elif cmd[0] == "help":
+            print()
+            print("rooms                                 Listar todas as salas")
+            print("create-room <room-name> <capacity>    Criar sala")
+            print("remove-room <room-name>               Deletar sala")
+            print("broadcast <arg1> ... <argN>           Mensagem para todos os participantes")
+            print("shutdown                              Desligamento do servidor")
+            print()
         else:
             print("Comando", cmd[0], "nao existe")
 
