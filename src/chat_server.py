@@ -49,6 +49,10 @@ list_of_rooms = [
     {"name": "BCE",
      "connections": [],
      "members": [],
+     "capacity": 20},
+	 {"name": "LAMA",
+     "connections": [],
+     "members": [],
      "capacity": 0},
 ]
 
@@ -59,7 +63,6 @@ para os demais clientes"""
 
 def handle(conn, room):
     while True:
-        # try:
         msg = conn.recv(2048).decode('ascii')
         if msg.startswith('KICK'):
             if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
@@ -76,16 +79,16 @@ def handle(conn, room):
                 print(f'{name_to_ban} foi banido!')
             else:
                 conn.send('Comando foi recusado!'.encode('ascii'))
+        elif msg.startswith('LS '):
+            r = int(msg.split(' ')[1])
+            memb = "\n".join(list_of_rooms[r]['members'])
+            conn.send(memb.encode('ascii'))
         elif msg.startswith('QUIT'):
             conn.send('QUIT'.encode('ascii'))
             remove(conn)
             return
         else:
             broadcast_room(msg, room)
-            # except:
-        # print('aiaiai')
-        # remove(conn)
-        # break
 
 
 """Using the below function, we broadcast the message to all
@@ -120,7 +123,9 @@ def remove(connection):
             i = room['connections'].index(connection)
             room['members'].remove(room['members'][i])
             room['connections'].remove(connection)
-    broadcast(f'{nickname} saiu do chat')
+            room['capacity'] += 1
+            broadcast_room(f'{nickname} saiu da sala', room)
+            return
 
 
 def receive():
@@ -174,8 +179,9 @@ def receive():
 
         # sends a message to the client whose user object is conn
         room_name = room['name']
-        conn.send(
-            f'\nBem vindo a sala {room_name}, {nickname}!'.encode('ascii'))
+        hellcome_message = f'\nBem vindo a sala {room_name}, {nickname}!\n'
+        hellcome_message += 'Para saber os comandos digite \\help\n'
+        conn.send(hellcome_message.encode('ascii'))
 
         # cria uma thread que ira tratar o cliente
         thread = threading.Thread(target=handle, args=(conn, room))

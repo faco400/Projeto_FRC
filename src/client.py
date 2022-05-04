@@ -56,7 +56,8 @@ def receive():
                 print('Saindo...')
                 stop_thread = True
             else:
-                print(message)
+                if not message == 'NICK':
+                    print(message)
         except:
             print("Ocorreu um erro")
             server.close()
@@ -93,6 +94,12 @@ def write():
             elif command == '\\quit':
                 server.send(f'QUIT {nickname}'.encode('ascii'))
                 stop_thread = True
+            elif command == '\\l':
+                server.send(f'LS {room}'.encode('ascii'))
+            elif command == '\\help':
+                print("\\quit - Sair do chat")
+                print("\\l    - Listar os participantes da sala")
+                print()
         else:
             server.send(message.encode('ascii'))
 

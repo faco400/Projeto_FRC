@@ -18,4 +18,3 @@ def choice_room(rooms: str) -> int:
             continue
         success = True
     return room - 1
-        
