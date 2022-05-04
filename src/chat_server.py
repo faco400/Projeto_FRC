@@ -1,8 +1,9 @@
 # Python program to implement server side of chat room.
+from re import I
 import socket
 # import select
 # import sys
-import threading
+import threading, os
 from utils import get_rooms
 # '''Replace "thread" with "_thread" for python 3'''
 # from _thread import *
@@ -31,29 +32,15 @@ increased as per convenience.
 """
 server.listen(100)
 
-list_of_clients = []  # armazena a lista de clientes
-list_of_nicknames = []  # armazena a lista de apelidos dos clientes
 list_of_rooms = [
     {"name": "FGA",
-     "connections": [],
-     "members": [],
-     "capacity": 30},
-    {"name": "PATIO",
      "connections": [],
      "members": [],
      "capacity": 30},
     {"name": "RU",
      "connections": [],
      "members": [],
-     "capacity": 20},
-    {"name": "BCE",
-     "connections": [],
-     "members": [],
-     "capacity": 20},
-    {"name": "LAMA",
-     "connections": [],
-     "members": [],
-     "capacity": 0},
+     "capacity": 20}
 ]
 
 """Metodo que ira tratar conexoes com os clientes
@@ -61,36 +48,89 @@ sempre buscando receber uma mensagem e fazendo o broadcast
 para os demais clientes"""
 
 
+def manager():
+    while True:
+        cmd = input("").split(' ')
+        if cmd[0] == "rooms":
+            rooms = get_rooms(list_of_rooms)
+            print(rooms[rooms.index('\n'):])
+        elif cmd[0] == "create-room":
+            if len(cmd) != 3:
+                print(
+                    "Sintaxe errada para o comando, o correto seria create-room <nome> <capacidade>")
+                continue
+            if not cmd[2].isdigit():
+                print("Capacidede deve ser um digito")
+                continue
+            remain = 100 - sum([r['capacity'] for r in list_of_rooms])
+            if int(cmd[2]) > remain:
+                print(
+                    "Nao eh possivel alocar uma sala desse tamanho, capacidade restante:", remain)
+                continue
+            list_of_rooms.append(
+                {"name": cmd[1],
+                 "connections": [],
+                 "members": [],
+                 "capacity": int(cmd[2])}
+            )
+            print("Sala", cmd[1], "criada com sucesso!")
+        elif cmd[0] == "remove-room":
+            if len(cmd) != 2:
+                print("Sintaxe errada para o comando, o correto seria remove-room <nome>")
+                continue
+            room_index = -1
+            for i, r in enumerate(list_of_rooms):
+                if r['name'] == cmd[1]:
+                    room_index = i
+                    break
+            if room_index == -1:
+                print("Nenhuma sala com esse nome")
+                continue
+            if list_of_rooms[room_index]['members']:
+                print("Nao pode deletar uma sala com pessoas nela")
+                continue
+            del list_of_rooms[room_index]
+            print("Sala deletada", cmd[1],"com sucesso!")
+        elif cmd[0] == "broadcast":
+            if len(cmd) < 1:
+                print("Sintaxe errada, voce deve passar algo apos o comando")
+            broadcast(" ".join(cmd[1:]))
+        elif cmd[0] == "shutdown":
+            os._exit(0)
+        else:
+            print("Comando", cmd[0], "nao existe")
+
+
 def handle(conn, room):
-	try:
-		while True:
-			msg = conn.recv(2048).decode('ascii')
-			if msg.startswith('KICK'):
-				if room['members'][room['connections'].index(conn)] == 'admin':
-					name_to_kick = msg[5:]
-					kick_user(name_to_kick, "foi expulso pelo admin")
-				else:
-					conn.send('Comando foi recusado!'.encode('ascii'))
-			elif msg.startswith('BAN'):
-				if room['members'][room['connections'].index(conn)] == 'admin':
-					name_to_ban = msg[4:]
-					kick_user(name_to_ban, "foi banido pelo admin")
-					with open('bans.txt', 'a') as f:
-						f.write(f'{name_to_ban}\n')
-				else:
-					conn.send('Comando foi recusado!'.encode('ascii'))
-			elif msg.startswith('LS '):
-				r = int(msg.split(' ')[1])
-				memb = "\n".join(list_of_rooms[r]['members'])
-				conn.send(memb.encode('ascii'))
-			elif msg.startswith('QUIT'):
-				conn.send('QUIT'.encode('ascii'))
-				remove(conn)
-				return
-			else:
-				broadcast_room(msg, room)
-	except:
-		return
+    try:
+        while True:
+            msg = conn.recv(2048).decode('ascii')
+            if msg.startswith('KICK'):
+                if room['members'][room['connections'].index(conn)] == 'admin':
+                    name_to_kick = msg[5:]
+                    kick_user(name_to_kick, "foi expulso pelo admin")
+                else:
+                    conn.send('Comando foi recusado!'.encode('ascii'))
+            elif msg.startswith('BAN'):
+                if room['members'][room['connections'].index(conn)] == 'admin':
+                    name_to_ban = msg[4:]
+                    kick_user(name_to_ban, "foi banido pelo admin")
+                    with open('bans.txt', 'a') as f:
+                        f.write(f'{name_to_ban}\n')
+                else:
+                    conn.send('Comando foi recusado!'.encode('ascii'))
+            elif msg.startswith('LS '):
+                r = int(msg.split(' ')[1])
+                memb = "\n".join(list_of_rooms[r]['members'])
+                conn.send(memb.encode('ascii'))
+            elif msg.startswith('QUIT'):
+                conn.send('QUIT'.encode('ascii'))
+                remove(conn)
+                return
+            else:
+                broadcast_room(msg, room)
+    except:
+        return
 
 
 """Using the below function, we broadcast the message to all
@@ -165,8 +205,6 @@ def receive():
 
         """Maintains a list of clients and nicknames for ease of broadcasting
 		a message to all available people in the chatroom"""
-        list_of_clients.append(conn)
-        list_of_nicknames.append(nickname)
         room['connections'].append(conn)
         room['members'].append(nickname)
         room['capacity'] -= 1
@@ -198,4 +236,6 @@ def kick_user(name, message):
 
 
 print('Escutando servidor')
+thread = threading.Thread(target=manager)
+thread.start()  # inicia a thread
 receive()
