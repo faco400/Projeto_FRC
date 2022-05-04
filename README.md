@@ -37,6 +37,8 @@ O projeto entregue possui diversas dos requisitos especificados implementados. C
 O projeto foi bastante interessante, pois deu uma noção melhor sobre como os aplicativos de bate-papo como whatsapp, telegram entre outros possam ser realizado. Fazendo essa comparação também dá pra perceber como esse projeto poderia evoluir em questões de cominicação entre o cliente e servidor, assim também como questões de segurança. Uma melhoria que vejo que seria significante e óbvia é de utilizar por exemplo nrgok para gerar um domínio que emcaminhe as requisições feitas na internet para a maquina local. possibilitando que usuários externos a rede façam uso da aplicação.
 
 ### Antonio Ruan Moura
+Foi uma boa oportunidade poder trabalhar utilizando os conceitos aprendidos na disciplina, para melhorias acredito que um prazo maior para as tarefas seja mais aproveitado, como diluir esse trabalho final para todo o semestre, apesar de ser uma ideia relativamente simpels, da bastante trabalho programar nesse nível. A participação do grupo foi bastante construtiva, no geral ambos parearam bastante e compartilharam conhecimento como um todo. Acredito que meu desempenho nesse trabalho foi muito significativo, unica coisa que ficou faltando foi mais tempo para concluir o projeto, pois existem muitas funcionalidades legais para ser explorada sobre o tema do trabalho final.
+
 
 ## Requisitos e Uso
 Para executar o projeto é necessário que sua maquina possua python3:

@@ -21,10 +21,8 @@ def choice_room(rooms: str) -> int:
         success = True
     return room - 1
 
-def envia(msg, conn, room):
-    print('olha o msg', msg)
+def envia(msg, room):
     message = msg.split(' ')
-    print('olha o strip', message)
     member_index = -1
     for i, member in enumerate(room['members']):
         if member == message[1]:

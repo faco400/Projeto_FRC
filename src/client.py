@@ -1,12 +1,5 @@
-# Python program to implement client side of chat room.
-from ast import While
-import socket
-import select
-import sys
-import os
-import threading
+import socket, os, threading, rsa
 from utils import choice_room
-import rsa
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -19,28 +12,24 @@ nickname = input("Digite seu apelido: ")
 if nickname == 'admin':
     password = input('Digite a senha para o admin: ')
 
-rooms = server.recv(2048).decode('ascii')
-print(rooms)
-room = choice_room(rooms)
-server.send(str(room).encode('ascii'))
+rooms = server.recv(2048).decode('ascii') # cliente inicialmente recebe salas disponiveis do servidor
+print(rooms) # imprime as salas do servidor no console
+room = choice_room(rooms) # cliente escolhe sala para ingressar
+server.send(str(room).encode('ascii')) # sala de escolha e enviada para o servidor
 
 PRIVATE_KEY = ""
-
-stop_thread = False
-
-"""Função que receberar as mensagens. Aqui tambem ocorre a
-identificação do recebimento da plavra chave NICK que permite
-o envio do apelido para o servidor. Se ocorrer algum erro é
-fechado a conexao"""
 
 stop_thread = False # Variavel auxiliar para gerenciar o controle das threads
 
 """Função que receber e responder o servidor
-de acordo com as palavras chaves NICK (para envio do nickname)
-PASS (para envio da senha de admin) BAN(para desconectar cliente em caso de banimento)
-e QUIT (Para fechar conexao caso cliente deseje sair do chat). Caso nao seja recebido
-nenhuma palavra chave entao se trata de uma mensagem 
-para a leitura do cliente que sera impressa no console.
+de acordo com as palavras chaves
+NICK (para envio do nickname)
+PASS (para envio da senha de admin)
+BAN(para desconectar cliente em caso de banimento)
+QUIT (Para fechar conexao caso cliente deseje sair do chat)
+ENCRYP (Para informar que recebeu uma mensagem encriptografada)
+. Caso nao seja recebido nenhuma palavra chave entao se trata 
+de uma mensagem para a leitura do cliente que sera impressa no console.
 Se ocorrer algum erro também é fechado a conexao"""
 def receive():
     while True:
