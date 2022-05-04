@@ -4,6 +4,7 @@ import socket
 import select
 import sys
 import threading
+from utils import choice_room
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -15,11 +16,14 @@ IP_address = '127.0.0.1'
 Port = 8080
 server.connect((IP_address, Port))
 
-
-nickname = input("escolha um apelido: ")
+nickname = input("Digite seu apelido: ")
 if nickname == 'admin':
     password = input('Digite a senha para o admin: ')
-room = input("Escolha uma sala: ")
+
+rooms = server.recv(2048).decode('ascii')
+print(rooms)
+room = choice_room(rooms)
+server.send(str(room).encode('ascii'))
 
 stop_thread = False
 

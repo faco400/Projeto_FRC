@@ -3,6 +3,7 @@ import socket
 # import select
 # import sys
 import threading
+from utils import get_rooms
 # '''Replace "thread" with "_thread" for python 3'''
 # from _thread import *
 
@@ -32,7 +33,24 @@ server.listen(100)
 
 list_of_clients = []  # armazena a lista de clientes
 list_of_nicknames = []  # armazena a lista de apelidos dos clientes
-list_of_rooms = []
+list_of_rooms = [
+    {"name": "FGA",
+     "connections": [],
+     "members": [],
+     "capacity": 30},
+    {"name": "PATIO",
+     "connections": [],
+     "members": [],
+     "capacity": 30},
+    {"name": "RU",
+     "connections": [],
+     "members": [],
+     "capacity": 20},
+    {"name": "BCE",
+     "connections": [],
+     "members": [],
+     "capacity": 0},
+]
 
 """Metodo que ira tratar conexoes com os clientes
 sempre buscando receber uma mensagem e fazendo o broadcast
@@ -106,6 +124,9 @@ def receive():
 
         # # prints the address of the user that just connected
         print(f"{str(addr)} connected")
+
+        conn.send(get_rooms(list_of_rooms).encode('ascii'))
+        room = conn.recv(2048).decode('ascii')
 
         # Envia uma palavra chave para o cliente escolher apelido
         conn.send('NICK'.encode('ascii'))
