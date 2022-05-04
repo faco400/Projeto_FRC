@@ -8,31 +8,29 @@ from utils import choice_room
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# if len(sys.argv) != 3:
-# 	print ("Correct usage: script, IP address, port number")
-# 	exit()
+IP_address = '127.0.0.1' # IP do servidor que se deseja conectar
+Port = 8080 # Porta do servidor que se deseja conectar
+server.connect((IP_address, Port)) # Realiza a conexão
 
-IP_address = '127.0.0.1'
-Port = 8080
-server.connect((IP_address, Port))
-
+"""Inputs iniciais do cliente. Caso seja admin pede-se a senha"""
 nickname = input("Digite seu apelido: ")
 if nickname == 'admin':
     password = input('Digite a senha para o admin: ')
 
-rooms = server.recv(2048).decode('ascii')
-print(rooms)
-room = choice_room(rooms)
-server.send(str(room).encode('ascii'))
+rooms = server.recv(2048).decode('ascii') # cliente inicialmente recebe salas disponiveis do servidor
+print(rooms) # imprime as salas do servidor no console
+room = choice_room(rooms) # cliente escolhe sala para ingressar
+server.send(str(room).encode('ascii')) # sala de escolha e enviada para o servidor
 
-stop_thread = False
+stop_thread = False # Variavel auxiliar para gerenciar o controle das threads
 
-"""Função que receberar as mensagens. Aqui tambem ocorre a
-identificação do recebimento da plavra chave NICK que permite
-o envio do apelido para o servidor. Se ocorrer algum erro é
-fechado a conexao"""
-
-
+"""Função que receber e responder o servidor
+de acordo com as palavras chaves NICK (para envio do nickname)
+PASS (para envio da senha de admin) BAN(para desconectar cliente em caso de banimento)
+e QUIT (Para fechar conexao caso cliente deseje sair do chat). Caso nao seja recebido
+nenhuma palavra chave entao se trata de uma mensagem 
+para a leitura do cliente que sera impressa no console.
+Se ocorrer algum erro também é fechado a conexao"""
 def receive():
     while True:
         global stop_thread
@@ -68,10 +66,10 @@ def receive():
             break
 
 
-"""funcao que ira escrever mandar a mensagem e nick do cliente
-para o servidor, onde sera feito o broadcast para os demais clientes"""
-
-
+"""Funcao responsavel pela escrita e envio de mensagens que o cliente digitar no chat.
+Em caso de mensagens comuns de dialogo no chat, o servidor ira recebe-las para realizar o broadcast
+para os membros da sala de bate papo. Em caso de comandos especiais o servidor ira tratar esses comandos
+de acordo com suas funcionalidades"""
 def write():
     admin_commands = ['\\kick', '\\ban']
     while True:

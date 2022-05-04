@@ -1,37 +1,29 @@
 # Python program to implement server side of chat room.
 from re import I
 import socket
-# import select
-# import sys
 import threading, os
 from utils import get_rooms
-# '''Replace "thread" with "_thread" for python 3'''
-# from _thread import *
 
-"""The first argument AF_INET is the address domain of the
-socket. This is used when we have an Internet Domain with
-any two hosts The second argument is the type of socket.
-SOCK_STREAM means that data or characters are read in
-a continuous flow."""
+
+"""O primeiro argumento AF_INET e o endereco de dominio de socket.
+Este e utilizado quando nos temos um dominio de internet com quaisquer dois hosts
+O segundo argumento e o tupo de socket. SOCK_STREAM significa que o dado, ou
+caracteres são lidos em um fluxo continuo"""
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 host = "127.0.0.1"  # servidor vai rodar na maquina local
 Port = 8080  # porta
 
-"""
-binds the server to an entered IP address and at the
-specified port number.
-The client must be aware of these parameters
-"""
+"""Vincula o servidor a um IP em uma porta especifica.
+O cliente deve ter conhecimento desses parametros"""
 server.bind((host, Port))
 
-"""
-listens for 100 active connections. This number can be
-increased as per convenience.
-"""
+"""Escuta por 100 conexoes ativas. Esse numero pode ser
+aumentado de acordo com a necessidade."""
 server.listen(100)
 
+"""Este e a lista padrão de salas que iram estar disponiveis no inicio da aplicação"""
 list_of_rooms = [
     {"name": "FGA",
      "connections": [],
@@ -43,11 +35,10 @@ list_of_rooms = [
      "capacity": 20}
 ]
 
-"""Metodo que ira tratar conexoes com os clientes
-sempre buscando receber uma mensagem e fazendo o broadcast
-para os demais clientes"""
-
-
+"""Função que vai funcionar como um tratador de comandos para
+o gerenciamento do servidor. Exibição de todas as salas existentes
+Criação de salas/Exclusão de salas, o comando para desligar o servidor
+e outro para fazer um broadcast a todos que estão conectados com o servidor"""
 def manager():
     while True:
         cmd = input("").split(' ')
@@ -108,18 +99,25 @@ def manager():
         else:
             print("Comando", cmd[0], "nao existe")
 
-
+"""Esse metodo será o tratador de mensagens recebidas do lado cliente. 
+Aqui se recebe palavras chaves em letras maíusculas que indicam o que
+o cliente deseja que o servidor realize. KICK para expulsar alguem do chat. BAN
+para banir alguem, LS para listar membros do chat, QUIT para fechar a conexao do user
+com o servidor"""
 def handle(conn, room):
     try:
         while True:
+            # Recebe mensagem com palavra chave do cliente
             msg = conn.recv(2048).decode('ascii')
-            if msg.startswith('KICK'):
+
+            if msg.startswith('KICK'): # Mensagem começa com paravra chave KICK server inicia a expulsao do cliente
                 if room['members'][room['connections'].index(conn)] == 'admin':
                     name_to_kick = msg[5:]
                     kick_user(name_to_kick, "foi expulso pelo admin")
                 else:
                     conn.send('Comando foi recusado!'.encode('ascii'))
-            elif msg.startswith('BAN'):
+
+            elif msg.startswith('BAN'): # Mensagem começa com paravra chave BAN server inicia o banimento do cliente
                 if room['members'][room['connections'].index(conn)] == 'admin':
                     name_to_ban = msg[4:]
                     kick_user(name_to_ban, "foi banido pelo admin")
@@ -127,11 +125,13 @@ def handle(conn, room):
                         f.write(f'{name_to_ban}\n')
                 else:
                     conn.send('Comando foi recusado!'.encode('ascii'))
-            elif msg.startswith('LS '):
+
+            elif msg.startswith('LS '): # Mensagem começa com paravra chave LS server inicia lista as salas para cliente
                 r = int(msg.split(' ')[1])
                 memb = "\n".join(list_of_rooms[r]['members'])
                 conn.send(memb.encode('ascii'))
-            elif msg.startswith('QUIT'):
+
+            elif msg.startswith('QUIT'): # Mensagem é palavra chave QUIT, servidor fecha a conexao com o cliente
                 conn.send('QUIT'.encode('ascii'))
                 remove(conn)
                 return
@@ -141,26 +141,21 @@ def handle(conn, room):
         return
 
 
-"""Using the below function, we broadcast the message to all
-clients who's object is not the same as the one sending
-the message"""
-
-
+"""Usando a funçao abaixo, e feito o broadcast de mensagens para todos os clientes 
+de todas as salas cujo objeto nao e o mesmo que esta enviando a mensagem"""
 def broadcast(message):
     for client in [i for j in [r['connections'] for r in list_of_rooms] for i in j]:
         client.send(str(message).encode('ascii'))
 
-
+"""Usando a funçao abaixo, e feito o broadcast de mensagens para todos os clientes 
+de uma sala especifica cujo objeto nao e o mesmo que esta enviando a mensagem"""
 def broadcast_room(message, room):
     for client in room['connections']:
         client.send(str(message).encode('ascii'))
 
-
-"""The following function simply removes the object
-from the list that was created at the beginning of
-the program"""
-
-
+""""A função a seguir tem como papel principal a remoção de um socket cliente conectado ao servidor
+procurando remover o elemento da sala e atualizar a capacidade de determinada sala.
+Utilizado para remover alguem do chat"""
 def remove(connection, message="saiu da sala"):
     for room in list_of_rooms:
         if connection in room['connections']:
@@ -174,19 +169,22 @@ def remove(connection, message="saiu da sala"):
             broadcast_room(f'{nickname} {message}', room)
             return
 
-
+"""Funcao que ira enviar palavras chaves e receber suas respostas
+do cliente a fim de fazer a manutençao das listas do chat(conexões, membros e capacidade).
+Ela também auxilia na criação do apelido do usuario e eh essencial para criação de threads que iram tratar
+os principais comandos do cliente."""
 def receive():
     while True:
-
-        """Accepts a connection request and stores two parameters,
-        conn which is a socket object for that user, and addr
-        which contains the IP address of the client that just
-        connected"""
+        """Aceita as requisiçoes de conexao e armazena dois parametros
+        conn que e o socket objeto para aquele cliente, e o endereco que contem
+        o IP do cliente que acabou de conectar"""
         conn, addr = server.accept()
 
-        # # prints the address of the user that just connected
+        # Imprime no console que o cliente acabou de se conectar
         print(f"{str(addr)} connected")
 
+        """Envia para o cliente a lista de salas disponiveis 
+        e recebe do cliente a sala que deseja ingressar"""
         conn.send(get_rooms(list_of_rooms).encode('ascii'))
         room = list_of_rooms[int(conn.recv(2048).decode('ascii'))]
 
@@ -194,9 +192,11 @@ def receive():
         conn.send('NICK'.encode('ascii'))
         nickname = conn.recv(2048).decode('ascii')
 
+        #Abre o txt com os bans do chat
         with open('bans.txt', 'r') as f:
             bans = f.readlines()
 
+        # Verifica se nickname se encontra na lista de bans
         if nickname+'\n' in bans:
             conn.send('BAN'.encode('ascii'))
             conn.close()
@@ -211,8 +211,8 @@ def receive():
                 conn.close()
                 continue
 
-        """Maintains a list of clients and nicknames for ease of broadcasting
-		a message to all available people in the chatroom"""
+        """Mantem a lista de clientes e apelidos assim como a capacidade da sala
+        A fim de facilitar o broadcast de mensagem para os clientes disponiveis no chat"""
         room['connections'].append(conn)
         room['members'].append(nickname)
         room['capacity'] -= 1
@@ -233,6 +233,7 @@ def receive():
         thread.start()  # inicia a thread
 
 
+"""Funcao auxiliar para a tirar o cliente do chat e desconecta-lo da aplicação."""
 def kick_user(name, message):
     for room in list_of_rooms:
         if name in room['members']:
@@ -243,7 +244,7 @@ def kick_user(name, message):
             return
 
 
-print('Escutando servidor')
-thread = threading.Thread(target=manager)
+print('Escutando servidor') #Aparece que o servidor esta escutando no console do chat_server
+thread = threading.Thread(target=manager) # Criar a thread de genrenciamento do servidor
 thread.start()  # inicia a thread
-receive()
+receive() # O servidor começa o seu dialogo com o cliente
