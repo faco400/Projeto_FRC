@@ -1,3 +1,5 @@
+import rsa
+
 def get_rooms(rooms_list: list) -> str:
     res = "Bem vindo ao trabalho final de FRC, aqui estao as nossas salas:\n"
     for i, room in enumerate(rooms_list):
@@ -18,3 +20,21 @@ def choice_room(rooms: str) -> int:
             continue
         success = True
     return room - 1
+
+def envia(msg, room):
+    message = msg.split(' ')
+    member_index = -1
+    for i, member in enumerate(room['members']):
+        if member == message[1]:
+            member_index = i
+            break
+    if member_index == -1:
+        print('not found member')
+        print(message[1])
+        return
+    to_send = " ".join(message[2:])
+    encMsg = rsa.encrypt(to_send.encode('ascii'), room['pub_keys'][member_index])
+    pre = "ENCRYP"
+    pre = pre.encode('ascii')
+    room['connections'][member_index].send(pre + encMsg)
+    

@@ -1,8 +1,8 @@
 # Python program to implement server side of chat room.
-from re import I
 import socket
 import threading, os
-from utils import get_rooms
+from utils import get_rooms, envia
+import rsa
 
 
 """O primeiro argumento AF_INET e o endereco de dominio de socket.
@@ -28,10 +28,12 @@ list_of_rooms = [
     {"name": "FGA",
      "connections": [],
      "members": [],
+     "pub_keys": [],
      "capacity": 30},
     {"name": "RU",
      "connections": [],
      "members": [],
+     "pub_keys": [],
      "capacity": 20}
 ]
 
@@ -61,6 +63,7 @@ def manager():
             list_of_rooms.append(
                 {"name": cmd[1],
                  "connections": [],
+                 "pub_keys": [],
                  "members": [],
                  "capacity": int(cmd[2])}
             )
@@ -101,8 +104,12 @@ def manager():
 
 """Esse metodo será o tratador de mensagens recebidas do lado cliente. 
 Aqui se recebe palavras chaves em letras maíusculas que indicam o que
-o cliente deseja que o servidor realize. KICK para expulsar alguem do chat. BAN
-para banir alguem, LS para listar membros do chat, QUIT para fechar a conexao do user
+o cliente deseja que o servidor realize. 
+KICK para expulsar alguem do chat.
+BAN para banir alguem
+LS para listar membros do chat
+QUIT para fechar a conexao do user
+TO para enviar uma mensagem encriptografada
 com o servidor"""
 def handle(conn, room):
     try:
@@ -135,6 +142,8 @@ def handle(conn, room):
                 conn.send('QUIT'.encode('ascii'))
                 remove(conn)
                 return
+            elif msg.startswith('TO '):
+                envia(msg, room)
             else:
                 broadcast_room(msg, room)
     except:
@@ -161,8 +170,10 @@ def remove(connection, message="saiu da sala"):
         if connection in room['connections']:
             i = room['connections'].index(connection)
             nickname = room['members'][i]
+            pubkey = room['pub_keys'][i]
             room['members'].remove(nickname)
             room['connections'].remove(connection)
+            room['pub_keys'].remove(pubkey)
             room['capacity'] += 1
             print(connection.getpeername(), "disconnected")
             connection.close()
@@ -211,10 +222,17 @@ def receive():
                 conn.close()
                 continue
 
+        """Gera um par de chave para a criptografia rsa"""
+        publicKey, privateKey = rsa.newkeys(512)
+        privateKey_str = privateKey.save_pkcs1(format='DER')
+        pre = "PRIKEY".encode('ascii')
+        conn.send(pre+privateKey_str)
+
         """Mantem a lista de clientes e apelidos assim como a capacidade da sala
         A fim de facilitar o broadcast de mensagem para os clientes disponiveis no chat"""
         room['connections'].append(conn)
         room['members'].append(nickname)
+        room['pub_keys'].append(publicKey)
         room['capacity'] -= 1
 
         # Mostra no server o apelido do cliente

@@ -1,9 +1,4 @@
-# Python program to implement client side of chat room.
-from ast import While
-import socket
-import select
-import sys, os
-import threading
+import socket, os, threading, rsa
 from utils import choice_room
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -22,48 +17,72 @@ print(rooms) # imprime as salas do servidor no console
 room = choice_room(rooms) # cliente escolhe sala para ingressar
 server.send(str(room).encode('ascii')) # sala de escolha e enviada para o servidor
 
+PRIVATE_KEY = ""
+
 stop_thread = False # Variavel auxiliar para gerenciar o controle das threads
 
 """Função que receber e responder o servidor
-de acordo com as palavras chaves NICK (para envio do nickname)
-PASS (para envio da senha de admin) BAN(para desconectar cliente em caso de banimento)
-e QUIT (Para fechar conexao caso cliente deseje sair do chat). Caso nao seja recebido
-nenhuma palavra chave entao se trata de uma mensagem 
-para a leitura do cliente que sera impressa no console.
+de acordo com as palavras chaves
+NICK (para envio do nickname)
+PASS (para envio da senha de admin)
+BAN(para desconectar cliente em caso de banimento)
+QUIT (Para fechar conexao caso cliente deseje sair do chat)
+ENCRYP (Para informar que recebeu uma mensagem encriptografada)
+. Caso nao seja recebido nenhuma palavra chave entao se trata 
+de uma mensagem para a leitura do cliente que sera impressa no console.
 Se ocorrer algum erro também é fechado a conexao"""
 def receive():
     while True:
         global stop_thread
+        global PRIVATE_KEY
         if stop_thread:
             break
         try:
-            message = server.recv(2048).decode('ascii')
-            if message == 'NICK':
+            message = server.recv(2048)
+            if message[:4].decode('ascii') == 'NICK':
+                message = message.decode('ascii')
                 server.send(nickname.encode('ascii'))
-                next_message = server.recv(2048).decode('ascii')
-                if next_message == 'PASS':
+                next_message = server.recv(2048)
+                if next_message[:4].decode('ascii') == 'PASS':
                     server.send(password.encode('ascii'))
-                    if server.recv(2048).decode('ascii') == 'REFUSE':
+                    nnext_message = server.recv(2048)
+                    if nnext_message[:6].decode('ascii') == 'REFUSE':
                         print("Conexao foi recusada. Senha errada")
                         stop_thread = True
-                elif next_message == 'BAN':
+                    if nnext_message[:6].decode('ascii') == "PRIKEY":
+
+                        PRIVATE_KEY = rsa.key.PrivateKey.load_pkcs1(
+                            nnext_message[6:], format='DER')
+
+                elif next_message[:3].decode('ascii') == 'BAN':
                     print("Conexao recusada por causa de ban")
                     server.close()
                     stop_thread = True
                     os._exit(1)
-            if message == 'QUIT':
+                if next_message[:6].decode('ascii') == "PRIKEY":
+                    PRIVATE_KEY = rsa.key.PrivateKey.load_pkcs1(
+                        next_message[6:], format='DER')
+                continue
+            if message[:4].decode('ascii') == 'QUIT':
                 print('Saindo...')
                 stop_thread = True
-            if message == 'KICK':
+                continue
+            if message[:4].decode('ascii') == 'KICK':
                 print('Voce foi expulso pelo admin')
                 os._exit(1)
-            else:
-                if not message == 'NICK':
-                    print(message)
-        except:
-            print("Ocorreu um erro")
+            if message[:6].decode('ascii') == "PRIKEY":
+                PRIVATE_KEY = rsa.key.PrivateKey.load_pkcs1(
+                    message[6:], format='DER')
+                continue
+            if message[:6].decode('ascii') == "ENCRYP":
+                print("Mensagem criptografada recebida:")
+                print(rsa.decrypt(message[6:], PRIVATE_KEY).decode('ascii'))
+                continue
+            print(message.decode('ascii'))
+        except Exception as e:
+            print("Ocorreu um erro", str(e))
             server.close()
-            break
+            os._exit(1)
 
 
 """Funcao responsavel pela escrita e envio de mensagens que o cliente digitar no chat.
@@ -98,9 +117,12 @@ def write():
                 stop_thread = True
             if command == '\\l':
                 server.send(f'LS {room}'.encode('ascii'))
+            if command == '\\to': 
+                server.send(f'TO {message[len(nickname)+3+4:]}'.encode('ascii'))
             if command == '\\help':
-                print("\\quit - Sair do chat")
-                print("\\l    - Listar os participantes da sala")
+                print("\\quit        Sair do chat")
+                print("\\l           Listar os participantes da sala")
+                print("\\to <member> mensagem encriptografada para um membro")
                 print()
         else:
             server.send(message.encode('ascii'))
