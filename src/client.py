@@ -53,7 +53,7 @@ def receive():
                     server.close()
                     stop_thread = True
             if message == 'QUIT':
-                print("fui mandado embora")
+                print('Saindo...')
                 stop_thread = True
             else:
                 print(message)
@@ -68,31 +68,30 @@ para o servidor, onde sera feito o broadcast para os demais clientes"""
 
 
 def write():
-    admin_commands = ['/kick', '/ban']
+    admin_commands = ['\\kick', '\\ban']
     while True:
         global stop_thread
         if stop_thread == True:
             break
         message = f'<{nickname}> {input("")}'
-        if message[len(nickname)+3:].startswith('/'):
-            cmd = message[message.index('/'):]
+        if message[len(nickname)+3:].startswith('\\'):
+            cmd = message[message.index('\\'):]
             command = ""
             for c in cmd:
                 if c == ' ':
                     break
                 command += c
             if nickname == 'admin':
-                if command == '/kick':
+                if command == '\\kick':
                     server.send(
                         f'KICK {message[len(nickname)+3+6:]}'.encode('ascii'))
-                if command == '/ban':
+                if command == '\\ban':
                     server.send(
                         f'BAN {message[len(nickname)+3+5:]}'.encode('ascii'))
             elif command in admin_commands:
                 print("Comandos reservados apenas para admin")
-            elif command == '/quit':
+            elif command == '\\quit':
                 server.send(f'QUIT {nickname}'.encode('ascii'))
-                print("pedi para sair")
                 stop_thread = True
         else:
             server.send(message.encode('ascii'))

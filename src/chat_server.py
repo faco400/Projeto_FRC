@@ -57,31 +57,31 @@ sempre buscando receber uma mensagem e fazendo o broadcast
 para os demais clientes"""
 
 
-def handle(conn):
+def handle(conn, room):
     while True:
         # try:
-        msg = message = conn.recv(2048)
-        if msg.decode('ascii').startswith('KICK'):
+        msg = conn.recv(2048).decode('ascii')
+        if msg.startswith('KICK'):
             if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
-                name_to_kick = msg.decode('ascii')[5:]
+                name_to_kick = msg[5:]
                 kick_user(name_to_kick)
             else:
                 conn.send('Comando foi recusado!'.encode('ascii'))
-        elif msg.decode('ascii').startswith('BAN'):
+        elif msg.startswith('BAN'):
             if list_of_nicknames[list_of_clients.index(conn)] == 'admin':
-                name_to_ban = msg.decode('ascii')[4:]
+                name_to_ban = msg[4:]
                 kick_user(name_to_ban)
                 with open('bans.txt', 'a') as f:
                     f.write(f'{name_to_ban}\n')
                 print(f'{name_to_ban} foi banido!')
             else:
                 conn.send('Comando foi recusado!'.encode('ascii'))
-        elif msg.decode('ascii').startswith('QUIT'):
+        elif msg.startswith('QUIT'):
             conn.send('QUIT'.encode('ascii'))
             remove(conn)
             return
         else:
-            broadcast(message)
+            broadcast_room(msg, room)
             # except:
         # print('aiaiai')
         # remove(conn)
@@ -94,8 +94,13 @@ the message"""
 
 
 def broadcast(message):
-    for client in list_of_clients:
-        client.send(message)
+    for client in [i for j in [r['connections'] for r in list_of_rooms] for i in j]:
+        client.send(str(message).encode('ascii'))
+
+
+def broadcast_room(message, room):
+    for client in room['connections']:
+        client.send(str(message).encode('ascii'))
 
 
 """The following function simply removes the object
@@ -110,7 +115,12 @@ def remove(connection):
     connection.close()
     nickname = list_of_nicknames[index]
     list_of_nicknames.remove(nickname)
-    broadcast(f'{nickname} saiu do chat'.encode('ascii'))
+    for room in list_of_rooms:
+        if connection in room['connections']:
+            i = room['connections'].index(connection)
+            room['members'].remove(room['members'][i])
+            room['connections'].remove(connection)
+    broadcast(f'{nickname} saiu do chat')
 
 
 def receive():
@@ -126,7 +136,7 @@ def receive():
         print(f"{str(addr)} connected")
 
         conn.send(get_rooms(list_of_rooms).encode('ascii'))
-        room = conn.recv(2048).decode('ascii')
+        room = list_of_rooms[int(conn.recv(2048).decode('ascii'))]
 
         # Envia uma palavra chave para o cliente escolher apelido
         conn.send('NICK'.encode('ascii'))
@@ -153,17 +163,22 @@ def receive():
 		a message to all available people in the chatroom"""
         list_of_clients.append(conn)
         list_of_nicknames.append(nickname)
+        room['connections'].append(conn)
+        room['members'].append(nickname)
+        room['capacity'] -= 1
 
         # Mostra no server o apelido do cliente
-        print(f'apelido do cliente e {nickname}')
+        print(f'apelido do cliente eh {nickname}')
         # faz um broadcast a todos sobre o cliente
-        broadcast(f'{nickname} entrou no chat'.encode('ascii'))
+        broadcast_room(f'{nickname} entrou na sala', room)
 
         # sends a message to the client whose user object is conn
-        conn.send(f'\nBem vindo ao chat {nickname}!'.encode('ascii'))
+        room_name = room['name']
+        conn.send(
+            f'\nBem vindo a sala {room_name}, {nickname}!'.encode('ascii'))
 
         # cria uma thread que ira tratar o cliente
-        thread = threading.Thread(target=handle, args=(conn,))
+        thread = threading.Thread(target=handle, args=(conn, room))
         thread.start()  # inicia a thread
 
 
@@ -176,7 +191,7 @@ def kick_user(name):
             'Voce foi expulso da sala de bate papo'.encode('ascii'))
         client_to_kick.close()
         list_of_nicknames.remove(name)
-        broadcast(f'{name} foi expulso pelo admin'.encode('ascii'))
+        broadcast(f'{name} foi expulso pelo admin')
 
 
 print('Escutando servidor')

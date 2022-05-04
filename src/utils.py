@@ -17,5 +17,5 @@ def choice_room(rooms: str) -> int:
             print("Sala lotada!")
             continue
         success = True
-    return room
+    return room - 1
         
