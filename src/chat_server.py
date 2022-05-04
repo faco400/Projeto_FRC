@@ -28,10 +28,12 @@ list_of_rooms = [
     {"name": "FGA",
      "connections": [],
      "members": [],
+     "pub_keys": [],
      "capacity": 30},
     {"name": "RU",
      "connections": [],
      "members": [],
+     "pub_keys": [],
      "capacity": 20}
 ]
 
@@ -61,6 +63,7 @@ def manager():
             list_of_rooms.append(
                 {"name": cmd[1],
                  "connections": [],
+                 "pub_keys": [],
                  "members": [],
                  "capacity": int(cmd[2])}
             )
@@ -135,6 +138,8 @@ def handle(conn, room):
                 conn.send('QUIT'.encode('ascii'))
                 remove(conn)
                 return
+            elif msg.startswith('TO '):
+                envia(msg, conn, room)
             else:
                 broadcast_room(msg, room)
     except:
@@ -161,8 +166,10 @@ def remove(connection, message="saiu da sala"):
         if connection in room['connections']:
             i = room['connections'].index(connection)
             nickname = room['members'][i]
+            pubkey = room['pub_keys'][i]
             room['members'].remove(nickname)
             room['connections'].remove(connection)
+            room['pub_keys'].remove(pubkey)
             room['capacity'] += 1
             print(connection.getpeername(), "disconnected")
             connection.close()
@@ -213,8 +220,16 @@ def receive():
 
         """Mantem a lista de clientes e apelidos assim como a capacidade da sala
         A fim de facilitar o broadcast de mensagem para os clientes disponiveis no chat"""
+        publicKey, privateKey = rsa.newkeys(512)
+        privateKey_str = privateKey.save_pkcs1(format='DER')
+        pre = "PRIKEY".encode('ascii')
+        conn.send(pre+privateKey_str)
+
+        """Maintains a list of clients and nicknames for ease of broadcasting
+		a message to all available people in the chatroom"""
         room['connections'].append(conn)
         room['members'].append(nickname)
+        room['pub_keys'].append(publicKey)
         room['capacity'] -= 1
 
         # Mostra no server o apelido do cliente
